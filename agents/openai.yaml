@@ -1,0 +1,3 @@
+interface:
+  display_name: "TS to MP4 + Transcript"
+  short_description: "Convert local TS videos to MP4 and output timestamped TXT transcripts on macOS"

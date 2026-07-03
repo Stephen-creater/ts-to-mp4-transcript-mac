@@ -1,5 +1,6 @@
 .DS_Store
 .venv/
+.venv-fast/
 .whisper-models/
 __pycache__/
 *.pyc

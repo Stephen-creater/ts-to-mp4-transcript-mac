@@ -1,11 +1,11 @@
 # TS to MP4 Transcript Mac
 
-Convert local media on macOS into timestamped `.txt` transcripts, with a fast default path for large files and a local fallback path when API access is unavailable.
+Convert local media on macOS into timestamped `.txt` transcripts, with an agent-native fast path for large files and a local fallback path when parallel orchestration is unavailable.
 
 This repo now supports:
 
-1. Fast parallel transcription with the OpenAI Audio API
-2. Local Whisper fallback for offline or no-key scenarios
+1. Agent-native chunking + parallel transcription SOP
+2. Local Whisper fallback for offline or no-parallel scenarios
 3. `TS -> MP4` conversion when the user explicitly needs a standard MP4 output
 
 ## Requirements
@@ -20,37 +20,35 @@ Install the system dependency first:
 brew install ffmpeg python
 ```
 
-## Default path: fast parallel transcription
+## Default path: agent-native parallel transcription
 
 This is the recommended path going forward when speed matters.
 
 ```bash
-export OPENAI_API_KEY="your-key-here"
-bash scripts/bootstrap_fast_transcribe.sh /path/to/media.mp4 /path/to/output.txt
+python3 scripts/prepare_transcription_chunks.py /path/to/media.mp4 /tmp/transcript_job
 ```
 
-You can tune the parallelism:
+Then let your host agent do the actual parallel work:
+
+1. Read `/tmp/transcript_job/manifest.json`
+2. Assign one chunk per subagent
+3. Each subagent transcribes its own chunk into the matching `chunk_XXXX.txt`
+4. Merge all chunk transcripts:
 
 ```bash
-export OPENAI_API_KEY="your-key-here"
-bash scripts/bootstrap_fast_transcribe.sh /path/to/media.mp4 /path/to/output.txt \
-  --model gpt-4o-transcribe \
-  --chunk-seconds 120 \
-  --overlap-seconds 4 \
-  --workers 8
+python3 scripts/merge_chunk_transcripts.py /tmp/transcript_job/manifest.json /path/to/output.txt
 ```
 
 Recommended defaults:
 
-- `gpt-4o-transcribe`: higher accuracy
-- `gpt-4o-mini-transcribe`: lower cost / often faster
 - chunk size: `120s`
 - overlap: `4s`
-- workers: `8`
+- many parallel workers when the host agent supports it
+- use the host agent's strongest available audio or multimodal transcription path
 
 ## Local fallback path
 
-Use this when you do not want to call a remote API, or when `OPENAI_API_KEY` is unavailable.
+Use this when you do not want to depend on parallel agent orchestration, or when the host environment only has a local CPU path.
 
 ### One-command usage
 
@@ -71,13 +69,6 @@ If you already have local Whisper dependencies available:
 python3 scripts/video_to_mp4_and_transcript.py /path/to/video.ts --overwrite
 ```
 
-If you already have `openai` installed and want the fast path directly:
-
-```bash
-export OPENAI_API_KEY="your-key-here"
-python3 scripts/parallel_openai_transcribe.py /path/to/media.mp4 /path/to/output.txt
-```
-
 Useful options:
 
 ```bash
@@ -91,8 +82,8 @@ python3 scripts/video_to_mp4_and_transcript.py /path/to/video.ts \
 
 ## Notes
 
-- The fast path is built for transcript speed, not MP4 conversion. It chunks audio locally, transcribes chunks in parallel, then merges timestamps back into one `.txt`.
-- The fast path requires `OPENAI_API_KEY`.
+- The default fast path is agent-native. It chunks audio locally, lets the host agent parallelize chunk transcription, then merges timestamps back into one `.txt`.
+- The repo does not require a single fixed remote transcription vendor. The host agent can choose the best available backend.
 - The local fallback path uses Whisper `turbo` and is slower on CPU, but does not require remote API access.
 - The `TS -> MP4` path still encodes to H.264 MP4 with `CRF 23` and `preset slow`.
 - The old local script preserves original AAC audio when creating MP4 outputs.

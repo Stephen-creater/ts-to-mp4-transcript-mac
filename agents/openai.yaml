@@ -1,3 +1,3 @@
 interface:
-  display_name: "Fast Media Transcript"
-  short_description: "Default to chunked parallel transcription, with local TS to MP4 fallback on macOS"
+  display_name: "Parallel Media Transcript SOP"
+  short_description: "Use chunking plus host-agent parallel transcription by default, with local fallback on macOS"
